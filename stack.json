@@ -11,12 +11,20 @@
 	},
 	"Mappings": {
 		"RegionMap": {
-            "us-west-1": { "AMI": "ami-3a674d5a" },
-            "eu-west-1": { "AMI": "ami-ebd02392" }
+			"us-west-1": {
+				"AMI": "ami-3a674d5a"
+			},
+			"eu-west-1": {
+				"AMI": "ami-ebd02392"
+			}
 		},
 		"NatRegionMap": {
-            "us-west-1": { "AMI": "ami-6089be00" },
-            "eu-west-1": { "AMI": "ami-312aea48" }
+			"us-west-1": {
+				"AMI": "ami-6089be00"
+			},
+			"eu-west-1": {
+				"AMI": "ami-312aea48"
+			}
 		}
 	},
 	"Resources": {
@@ -36,8 +44,7 @@
 			"Properties": {
 				"CidrBlock": "10.0.0.0/24",
 				"MapPublicIpOnLaunch": true,
-				"Tags": [
-                    {
+				"Tags": [{
 						"Key": "resclass",
 						"Value": "subnet"
 					},
@@ -48,10 +55,12 @@
 				],
 				"VpcId": {
 					"Ref": "VPC1"
-                },
-                "AvailabilityZone" : {
-                    "Fn::Select" : [ "0", { "Fn::GetAZs" : "" } ]
-                }
+				},
+				"AvailabilityZone": {
+					"Fn::Select": ["0", {
+						"Fn::GetAZs": ""
+					}]
+				}
 			}
 		},
 		"Subnet2": {
@@ -59,8 +68,7 @@
 			"Properties": {
 				"CidrBlock": "10.0.1.0/24",
 				"MapPublicIpOnLaunch": false,
-				"Tags": [
-                    {
+				"Tags": [{
 						"Key": "resclass",
 						"Value": "subnet"
 					},
@@ -72,9 +80,11 @@
 				"VpcId": {
 					"Ref": "VPC1"
 				},
-                "AvailabilityZone" : {
-                    "Fn::Select" : [ "1", { "Fn::GetAZs" : "" } ]
-                }
+				"AvailabilityZone": {
+					"Fn::Select": ["1", {
+						"Fn::GetAZs": ""
+					}]
+				}
 			}
 		},
 		"Gateway": {
@@ -143,8 +153,7 @@
 				"VpcId": {
 					"Ref": "VPC1"
 				},
-				"Tags": [
-                    {
+				"Tags": [{
 						"Key": "resclass",
 						"Value": "routetable"
 					},
@@ -189,8 +198,7 @@
 				"VpcId": {
 					"Ref": "VPC1"
 				},
-				"SecurityGroupIngress": [
-                    {
+				"SecurityGroupIngress": [{
 						"IpProtocol": "tcp",
 						"CidrIp": "10.0.1.0/24",
 						"FromPort": "80",
@@ -209,8 +217,7 @@
 						"ToPort": "22"
 					}
 				],
-				"SecurityGroupEgress": [
-                    {
+				"SecurityGroupEgress": [{
 						"IpProtocol": "tcp",
 						"CidrIp": "0.0.0.0/0",
 						"FromPort": "22",
@@ -263,8 +270,7 @@
 				"VpcId": {
 					"Ref": "VPC1"
 				},
-				"SecurityGroupIngress": [
-                    {
+				"SecurityGroupIngress": [{
 						"IpProtocol": "tcp",
 						"CidrIp": "0.0.0.0/0",
 						"FromPort": "80",
@@ -277,8 +283,7 @@
 						"ToPort": "443"
 					}
 				],
-				"SecurityGroupEgress": [
-                    {
+				"SecurityGroupEgress": [{
 						"IpProtocol": "tcp",
 						"CidrIp": "0.0.0.0/0",
 						"FromPort": "80",
@@ -297,7 +302,9 @@
 			"Type": "AWS::EC2::Instance",
 			"Properties": {
 				"ImageId": {
-					"Fn::FindInMap": ["NatRegionMap", { "Ref": "AWS::Region" }, "AMI"]
+					"Fn::FindInMap": ["NatRegionMap", {
+						"Ref": "AWS::Region"
+					}, "AMI"]
 				},
 				"InstanceType": "t2.micro",
 				"KeyName": {
@@ -351,10 +358,13 @@
 						"Ref": "AWS::StackName"
 					}, "LoadBalancer"]]
 				},
-				"Subnets": [
-                    { "Ref": "Subnet1" },
-                    { "Ref": "Subnet2" }
-                ],
+				"Subnets": [{
+						"Ref": "Subnet1"
+					},
+					{
+						"Ref": "Subnet2"
+					}
+				],
 				"SecurityGroups": [{
 					"Ref": "ElbSecurityGroup"
 				}]
@@ -363,11 +373,17 @@
 		"TargetGroupService1": {
 			"Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
 			"Properties": {
-				"Name": { "Fn::Join": ["-", [{ "Ref": "AWS::StackName" }, "TargetGroupService1"]] },
+				"Name": {
+					"Fn::Join": ["-", [{
+						"Ref": "AWS::StackName"
+					}, "TargetGroupService1"]]
+				},
 				"Port": 80,
 				"Protocol": "HTTP",
 				"HealthCheckPath": "/service1",
-				"VpcId": { "Ref": "VPC1" },
+				"VpcId": {
+					"Ref": "VPC1"
+				},
 				"TargetType": "instance",
 				"Targets": [{
 					"Id": {
@@ -379,11 +395,17 @@
 		"TargetGroupService2": {
 			"Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
 			"Properties": {
-				"Name": { "Fn::Join": ["-", [{ "Ref": "AWS::StackName" }, "TargetGroupService2"]] },
+				"Name": {
+					"Fn::Join": ["-", [{
+						"Ref": "AWS::StackName"
+					}, "TargetGroupService2"]]
+				},
 				"Port": 80,
 				"Protocol": "HTTP",
 				"HealthCheckPath": "/service2",
-				"VpcId": { "Ref": "VPC1" },
+				"VpcId": {
+					"Ref": "VPC1"
+				},
 				"TargetType": "instance",
 				"Targets": [{
 					"Id": {
@@ -474,8 +496,8 @@
 							"#!/bin/bash -xe\n",
 							"/usr/bin/yum -y update\n",
 							"/usr/bin/yum -y install httpd\n",
-							"/sbin/chkconfig httpd on\n",                            
-                            "echo '<html><head></head><body>service1</body></html>' > /var/www/html/service1\n",
+							"/sbin/chkconfig httpd on\n",
+							"echo '<html><head></head><body>service1</body></html>' > /var/www/html/service1\n",
 							"echo \"/opt/aws/bin/cfn-signal -e $? ",
 							"  --stack ", {
 								"Ref": "AWS::StackName"
@@ -528,7 +550,7 @@
 							"/usr/bin/yum -y update\n",
 							"/usr/bin/yum -y install httpd\n",
 							"/sbin/chkconfig httpd on\n",
-                            "echo '<html><head></head><body>service2</body></html>' > /var/www/html/service2\n",
+							"echo '<html><head></head><body>service2</body></html>' > /var/www/html/service2\n",
 							"echo \"/opt/aws/bin/cfn-signal -e $? ",
 							"  --stack ", {
 								"Ref": "AWS::StackName"
