@@ -1,7 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "Kurt Geiger ALB Demo",
-
+	"Description": "Connect two EC2 servers to ALB in a VPC",
 	"Parameters": {
 		"KeyPair": {
 			"Type": "AWS::EC2::KeyPair::KeyName",
@@ -10,40 +9,34 @@
 			"ConstraintDescription": "needs to be an existing EC2 keypair (set up in web console)"
 		}
 	},
-
 	"Mappings": {
 		"RegionMap": {
-			"us-west-1": {
-				"AMI": "ami-3a674d5a"
-			}
+			"us-west-1": { "AMI": "ami-3a674d5a" }
 		},
 		"NatRegionMap": {
-			"us-west-1": {
-				"AMI": "ami-6089be00"
-			}
+			"us-west-1": { "AMI": "ami-6089be00" }
 		}
 	},
-
 	"Resources": {
-		"VCTSLabVPC1": {
+		"VPC1": {
 			"Type": "AWS::EC2::VPC",
 			"Properties": {
 				"CidrBlock": "10.0.0.0/16",
 				"EnableDnsHostnames": true,
 				"Tags": [{
 					"Key": "resclass",
-					"Value": "vcts-lab-vpc"
+					"Value": "vpc"
 				}]
 			}
 		},
-		"VCTSLabSubnet1": {
+		"Subnet1": {
 			"Type": "AWS::EC2::Subnet",
 			"Properties": {
 				"CidrBlock": "10.0.0.0/24",
 				"MapPublicIpOnLaunch": true,
 				"Tags": [{
 						"Key": "resclass",
-						"Value": "vcts-lab-subnet"
+						"Value": "subnet"
 					},
 					{
 						"Key": "subnet-type",
@@ -51,19 +44,19 @@
 					}
 				],
 				"VpcId": {
-					"Ref": "VCTSLabVPC1"
+					"Ref": "VPC1"
                 },
                 "AvailabilityZone": "us-west-1a"
 			}
 		},
-		"VCTSLabSubnet2": {
+		"Subnet2": {
 			"Type": "AWS::EC2::Subnet",
 			"Properties": {
 				"CidrBlock": "10.0.1.0/24",
 				"MapPublicIpOnLaunch": false,
 				"Tags": [{
 						"Key": "resclass",
-						"Value": "vcts-lab-subnet"
+						"Value": "subnet"
 					},
 					{
 						"Key": "subnet-type",
@@ -71,40 +64,40 @@
 					}
 				],
 				"VpcId": {
-					"Ref": "VCTSLabVPC1"
+					"Ref": "VPC1"
 				},
 				"AvailabilityZone": "us-west-1c"
 			}
 		},
-		"VCTSLabGateway": {
+		"Gateway": {
 			"Type": "AWS::EC2::InternetGateway",
 			"Properties": {
 				"Tags": [{
 					"Key": "resclass",
-					"Value": "vcts-lab-gateway"
+					"Value": "gateway"
 				}]
 			}
 		},
-		"VCTSLabGatewayAttachment": {
+		"GatewayAttachment": {
 			"Type": "AWS::EC2::VPCGatewayAttachment",
 			"Properties": {
 				"InternetGatewayId": {
-					"Ref": "VCTSLabGateway"
+					"Ref": "Gateway"
 				},
 				"VpcId": {
-					"Ref": "VCTSLabVPC1"
+					"Ref": "VPC1"
 				}
 			}
 		},
-		"VCTSLabPublicRouteTable": {
+		"PublicRouteTable": {
 			"Type": "AWS::EC2::RouteTable",
 			"Properties": {
 				"VpcId": {
-					"Ref": "VCTSLabVPC1"
+					"Ref": "VPC1"
 				},
 				"Tags": [{
 						"Key": "resclass",
-						"Value": "vcts-lab-routetable"
+						"Value": "routetable"
 					},
 					{
 						"Key": "routetable-type",
@@ -113,38 +106,39 @@
 				]
 			}
 		},
-		"VCTSLabPublicDefaultRoute": {
+		"PublicDefaultRoute": {
 			"Type": "AWS::EC2::Route",
 			"Properties": {
 				"DestinationCidrBlock": "0.0.0.0/0",
 				"GatewayId": {
-					"Ref": "VCTSLabGateway"
+					"Ref": "Gateway"
 				},
 				"RouteTableId": {
-					"Ref": "VCTSLabPublicRouteTable"
+					"Ref": "PublicRouteTable"
 				}
 			}
 		},
-		"VCTSLabPublicSubnet1Assoc": {
+		"PublicSubnet1Assoc": {
 			"Type": "AWS::EC2::SubnetRouteTableAssociation",
 			"Properties": {
 				"SubnetId": {
-					"Ref": "VCTSLabSubnet1"
+					"Ref": "Subnet1"
 				},
 				"RouteTableId": {
-					"Ref": "VCTSLabPublicRouteTable"
+					"Ref": "PublicRouteTable"
 				}
 			}
 		},
-		"VCTSLabPrivateRouteTable": {
+		"PrivateRouteTable": {
 			"Type": "AWS::EC2::RouteTable",
 			"Properties": {
 				"VpcId": {
-					"Ref": "VCTSLabVPC1"
+					"Ref": "VPC1"
 				},
-				"Tags": [{
+				"Tags": [
+                    {
 						"Key": "resclass",
-						"Value": "vcts-lab-routetable"
+						"Value": "routetable"
 					},
 					{
 						"Key": "routetable-type",
@@ -153,41 +147,42 @@
 				]
 			}
 		},
-		"VCTSLabPrivateDefaultRoute": {
+		"PrivateDefaultRoute": {
 			"Type": "AWS::EC2::Route",
 			"Properties": {
 				"DestinationCidrBlock": "0.0.0.0/0",
 				"InstanceId": {
-					"Ref": "VCTSLabNatGw"
+					"Ref": "NatGw"
 				},
 				"RouteTableId": {
-					"Ref": "VCTSLabPrivateRouteTable"
+					"Ref": "PrivateRouteTable"
 				}
 			}
 		},
-		"VCTSLabPrivateSubnet2Assoc": {
+		"PrivateSubnet2Assoc": {
 			"Type": "AWS::EC2::SubnetRouteTableAssociation",
 			"Properties": {
 				"SubnetId": {
-					"Ref": "VCTSLabSubnet2"
+					"Ref": "Subnet2"
 				},
 				"RouteTableId": {
-					"Ref": "VCTSLabPrivateRouteTable"
+					"Ref": "PrivateRouteTable"
 				}
 			}
 		},
-		"VCTSNatSecurityGroup": {
+		"NatSecurityGroup": {
 			"Type": "AWS::EC2::SecurityGroup",
 			"Properties": {
 				"Tags": [{
 					"Key": "resclass",
-					"Value": "vcts-lab-sg"
+					"Value": "nat-security-group"
 				}],
-				"GroupDescription": "NAT (External) VCTS security group",
+				"GroupDescription": "NAT (External) security group",
 				"VpcId": {
-					"Ref": "VCTSLabVPC1"
+					"Ref": "VPC1"
 				},
-				"SecurityGroupIngress": [{
+				"SecurityGroupIngress": [
+                    {
 						"IpProtocol": "tcp",
 						"CidrIp": "10.0.1.0/24",
 						"FromPort": "80",
@@ -206,7 +201,8 @@
 						"ToPort": "22"
 					}
 				],
-				"SecurityGroupEgress": [{
+				"SecurityGroupEgress": [
+                    {
 						"IpProtocol": "tcp",
 						"CidrIp": "0.0.0.0/0",
 						"FromPort": "22",
@@ -227,16 +223,16 @@
 				]
 			}
 		},
-		"VCTSPrivateSecurityGroup": {
+		"PrivateSecurityGroup": {
 			"Type": "AWS::EC2::SecurityGroup",
 			"Properties": {
 				"Tags": [{
 					"Key": "resclass",
-					"Value": "vcts-lab-sg"
+					"Value": "private-security-group"
 				}],
-				"GroupDescription": "Private (Internal) VCTS security group",
+				"GroupDescription": "Private (Internal) security group",
 				"VpcId": {
-					"Ref": "VCTSLabVPC1"
+					"Ref": "VPC1"
 				},
 				"SecurityGroupIngress": [{
 					"IpProtocol": "-1",
@@ -248,18 +244,19 @@
 				}]
 			}
 		},
-		"VCTSElbSecurityGroup": {
+		"ElbSecurityGroup": {
 			"Type": "AWS::EC2::SecurityGroup",
 			"Properties": {
 				"Tags": [{
 					"Key": "resclass",
-					"Value": "vcts-lab-sg"
+					"Value": "elb-security-group"
 				}],
-				"GroupDescription": "ELB (load balancer) VCTS security group",
+				"GroupDescription": "ELB (load balancer) security group",
 				"VpcId": {
-					"Ref": "VCTSLabVPC1"
+					"Ref": "VPC1"
 				},
-				"SecurityGroupIngress": [{
+				"SecurityGroupIngress": [
+                    {
 						"IpProtocol": "tcp",
 						"CidrIp": "0.0.0.0/0",
 						"FromPort": "80",
@@ -272,7 +269,8 @@
 						"ToPort": "443"
 					}
 				],
-				"SecurityGroupEgress": [{
+				"SecurityGroupEgress": [
+                    {
 						"IpProtocol": "tcp",
 						"CidrIp": "0.0.0.0/0",
 						"FromPort": "80",
@@ -287,28 +285,26 @@
 				]
 			}
 		},
-		"VCTSLabNatGw": {
+		"NatGw": {
 			"Type": "AWS::EC2::Instance",
 			"Properties": {
 				"ImageId": {
-					"Fn::FindInMap": ["NatRegionMap", {
-						"Ref": "AWS::Region"
-					}, "AMI"]
+					"Fn::FindInMap": ["NatRegionMap", { "Ref": "AWS::Region" }, "AMI"]
 				},
 				"InstanceType": "t2.micro",
 				"KeyName": {
 					"Ref": "KeyPair"
 				},
 				"SubnetId": {
-					"Ref": "VCTSLabSubnet1"
+					"Ref": "Subnet1"
 				},
 				"SourceDestCheck": false,
 				"SecurityGroupIds": [{
-					"Ref": "VCTSNatSecurityGroup"
+					"Ref": "NatSecurityGroup"
 				}],
 				"Tags": [{
 					"Key": "resclass",
-					"Value": "vcts-lab-natgw"
+					"Value": "nat-gateway"
 				}],
 				"UserData": {
 					"Fn::Base64": {
@@ -319,7 +315,7 @@
 							"  --stack ", {
 								"Ref": "AWS::StackName"
 							}, " ",
-							"  --resource VCTSLabNatGw ",
+							"  --resource NatGw ",
 							"  --region ", {
 								"Ref": "AWS::Region"
 							}, " ",
@@ -348,32 +344,26 @@
 					}, "LoadBalancer"]]
 				},
 				"Subnets": [
-                    { "Ref": "VCTSLabSubnet1" },
-                    { "Ref": "VCTSLabSubnet2" }
+                    { "Ref": "Subnet1" },
+                    { "Ref": "Subnet2" }
                 ],
 				"SecurityGroups": [{
-					"Ref": "VCTSElbSecurityGroup"
+					"Ref": "ElbSecurityGroup"
 				}]
 			}
 		},
 		"TargetGroupService1": {
 			"Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
 			"Properties": {
-				"Name": {
-					"Fn::Join": ["-", [{
-						"Ref": "AWS::StackName"
-					}, "TargetGroupService1"]]
-				},
+				"Name": { "Fn::Join": ["-", [{ "Ref": "AWS::StackName" }, "TargetGroupService1"]] },
 				"Port": 80,
 				"Protocol": "HTTP",
 				"HealthCheckPath": "/service1",
-				"VpcId": {
-					"Ref": "VCTSLabVPC1"
-				},
+				"VpcId": { "Ref": "VPC1" },
 				"TargetType": "instance",
 				"Targets": [{
 					"Id": {
-						"Ref": "VCTSLabSrv1"
+						"Ref": "Srv1"
 					}
 				}]
 			}
@@ -381,21 +371,15 @@
 		"TargetGroupService2": {
 			"Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
 			"Properties": {
-				"Name": {
-					"Fn::Join": ["-", [{
-						"Ref": "AWS::StackName"
-					}, "TargetGroupService2"]]
-				},
+				"Name": { "Fn::Join": ["-", [{ "Ref": "AWS::StackName" }, "TargetGroupService2"]] },
 				"Port": 80,
 				"Protocol": "HTTP",
 				"HealthCheckPath": "/service2",
-				"VpcId": {
-					"Ref": "VCTSLabVPC1"
-				},
+				"VpcId": { "Ref": "VPC1" },
 				"TargetType": "instance",
 				"Targets": [{
 					"Id": {
-						"Ref": "VCTSLabSrv2"
+						"Ref": "Srv2"
 					}
 				}]
 			}
@@ -454,7 +438,7 @@
 				"Priority": 2
 			}
 		},
-		"VCTSLabSrv1": {
+		"Srv1": {
 			"Type": "AWS::EC2::Instance",
 			"Properties": {
 				"ImageId": {
@@ -467,14 +451,14 @@
 					"Ref": "KeyPair"
 				},
 				"SubnetId": {
-					"Ref": "VCTSLabSubnet2"
+					"Ref": "Subnet2"
 				},
 				"SecurityGroupIds": [{
-					"Ref": "VCTSPrivateSecurityGroup"
+					"Ref": "PrivateSecurityGroup"
 				}],
 				"Tags": [{
 					"Key": "resclass",
-					"Value": "vcts-lab-srv"
+					"Value": "srv"
 				}],
 				"UserData": {
 					"Fn::Base64": {
@@ -482,14 +466,13 @@
 							"#!/bin/bash -xe\n",
 							"/usr/bin/yum -y update\n",
 							"/usr/bin/yum -y install httpd\n",
-							"/sbin/chkconfig httpd on\n",
-                            "echo '<html><head></head><body>vcts-lab-srv1</body></html>' > /var/www/html/index.html\n",
+							"/sbin/chkconfig httpd on\n",                            
                             "echo '<html><head></head><body>service1</body></html>' > /var/www/html/service1\n",
 							"echo \"/opt/aws/bin/cfn-signal -e $? ",
 							"  --stack ", {
 								"Ref": "AWS::StackName"
 							}, " ",
-							"  --resource VCTSLabSrv1 ",
+							"  --resource Srv1 ",
 							"  --region ", {
 								"Ref": "AWS::Region"
 							}, " ",
@@ -506,9 +489,9 @@
 					"Timeout": "PT10M"
 				}
 			},
-			"DependsOn": "VCTSLabNatGw"
+			"DependsOn": "NatGw"
 		},
-		"VCTSLabSrv2": {
+		"Srv2": {
 			"Type": "AWS::EC2::Instance",
 			"Properties": {
 				"ImageId": {
@@ -521,14 +504,14 @@
 					"Ref": "KeyPair"
 				},
 				"SubnetId": {
-					"Ref": "VCTSLabSubnet2"
+					"Ref": "Subnet2"
 				},
 				"SecurityGroupIds": [{
-					"Ref": "VCTSPrivateSecurityGroup"
+					"Ref": "PrivateSecurityGroup"
 				}],
 				"Tags": [{
 					"Key": "resclass",
-					"Value": "vcts-lab-srv"
+					"Value": "srv"
 				}],
 				"UserData": {
 					"Fn::Base64": {
@@ -537,13 +520,12 @@
 							"/usr/bin/yum -y update\n",
 							"/usr/bin/yum -y install httpd\n",
 							"/sbin/chkconfig httpd on\n",
-                            "echo '<html><head></head><body>vcts-lab-srv2</body></html>' > /var/www/html/index.html\n",
                             "echo '<html><head></head><body>service2</body></html>' > /var/www/html/service2\n",
 							"echo \"/opt/aws/bin/cfn-signal -e $? ",
 							"  --stack ", {
 								"Ref": "AWS::StackName"
 							}, " ",
-							"  --resource VCTSLabSrv2 ",
+							"  --resource Srv2 ",
 							"  --region ", {
 								"Ref": "AWS::Region"
 							}, " ",
@@ -560,26 +542,26 @@
 					"Timeout": "PT10M"
 				}
 			},
-			"DependsOn": "VCTSLabNatGw"
+			"DependsOn": "NatGw"
 		}
 	},
 	"Outputs": {
 		"NatIPAddr": {
-			"Description": "IP address of the NAT instance (shell to this address)",
+			"Description": "IP address of the NAT instance (SSH to this address)",
 			"Value": {
-				"Fn::GetAtt": ["VCTSLabNatGw", "PublicIp"]
+				"Fn::GetAtt": ["NatGw", "PublicIp"]
 			}
 		},
 		"Srv1IPAddr": {
 			"Description": "IP address of srv1 (internal)",
 			"Value": {
-				"Fn::GetAtt": ["VCTSLabSrv1", "PrivateIp"]
+				"Fn::GetAtt": ["Srv1", "PrivateIp"]
 			}
 		},
 		"Srv2IPAddr": {
 			"Description": "IP address of srv2 (internal)",
 			"Value": {
-				"Fn::GetAtt": ["VCTSLabSrv2", "PrivateIp"]
+				"Fn::GetAtt": ["Srv2", "PrivateIp"]
 			}
 		},
 		"ELBDNSName": {
