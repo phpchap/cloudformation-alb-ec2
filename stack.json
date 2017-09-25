@@ -12,12 +12,12 @@
 	},
 
 	"Mappings": {
-		"RegionMap": {			
+		"RegionMap": {
 			"us-west-1": {
 				"AMI": "ami-3a674d5a"
 			}
 		},
-		"NatRegionMap": {			
+		"NatRegionMap": {
 			"us-west-1": {
 				"AMI": "ami-6089be00"
 			}
@@ -52,7 +52,8 @@
 				],
 				"VpcId": {
 					"Ref": "VCTSLabVPC1"
-				}
+                },
+                "AvailabilityZone": "us-west-1a"
 			}
 		},
 		"VCTSLabSubnet2": {
@@ -72,9 +73,7 @@
 				"VpcId": {
 					"Ref": "VCTSLabVPC1"
 				},
-				"AvailabilityZone": {
-					"Fn::GetAtt": ["VCTSLabSubnet1", "AvailabilityZone"]
-				}
+				"AvailabilityZone": "us-west-1c"
 			}
 		},
 		"VCTSLabGateway": {
@@ -338,40 +337,121 @@
 				}
 			}
 		},
-		"VCTSLabELB1": {
-			"Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+
+		"LoadBalancer": {
+			"Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
 			"Properties": {
-				"HealthCheck": {
-					"HealthyThreshold": "2",
-					"Interval": "5",
-					"Target": "HTTP:80/",
-					"Timeout": "3",
-					"UnhealthyThreshold": "2"
-				},
-				"Listeners": [{
-					"InstancePort": "80",
-					"InstanceProtocol": "HTTP",
-					"LoadBalancerPort": "80",
-					"Protocol": "HTTP"
-				}],
 				"Scheme": "internet-facing",
-				"Subnets": [{
-					"Ref": "VCTSLabSubnet1"
-				}],
+				"Name": {
+					"Fn::Join": ["-", [{
+						"Ref": "AWS::StackName"
+					}, "LoadBalancer"]]
+				},
+				"Subnets": [
+                    { "Ref": "VCTSLabSubnet1" },
+                    { "Ref": "VCTSLabSubnet2" }
+                ],
 				"SecurityGroups": [{
 					"Ref": "VCTSElbSecurityGroup"
-				}],
-				"Instances": [{
+				}]
+			}
+		},
+		"TargetGroupService1": {
+			"Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+			"Properties": {
+				"Name": {
+					"Fn::Join": ["-", [{
+						"Ref": "AWS::StackName"
+					}, "TargetGroupService1"]]
+				},
+				"Port": 80,
+				"Protocol": "HTTP",
+				"HealthCheckPath": "/service1",
+				"VpcId": {
+					"Ref": "VCTSLabVPC1"
+				},
+				"TargetType": "instance",
+				"Targets": [{
+					"Id": {
 						"Ref": "VCTSLabSrv1"
-					},
-					{
+					}
+				}]
+			}
+		},
+		"TargetGroupService2": {
+			"Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+			"Properties": {
+				"Name": {
+					"Fn::Join": ["-", [{
+						"Ref": "AWS::StackName"
+					}, "TargetGroupService2"]]
+				},
+				"Port": 80,
+				"Protocol": "HTTP",
+				"HealthCheckPath": "/service2",
+				"VpcId": {
+					"Ref": "VCTSLabVPC1"
+				},
+				"TargetType": "instance",
+				"Targets": [{
+					"Id": {
 						"Ref": "VCTSLabSrv2"
 					}
-				],
-				"Tags": [{
-					"Key": "resclass",
-					"Value": "vcts-lab-elb"
 				}]
+			}
+		},
+		"Listener": {
+			"Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"Properties": {
+				"DefaultActions": [{
+					"Type": "forward",
+					"TargetGroupArn": {
+						"Ref": "TargetGroupService1"
+					}
+				}],
+				"LoadBalancerArn": {
+					"Ref": "LoadBalancer"
+				},
+				"Port": "80",
+				"Protocol": "HTTP"
+			}
+		},
+		"ListenerRuleService1": {
+			"Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+			"Properties": {
+				"Actions": [{
+					"TargetGroupArn": {
+						"Ref": "TargetGroupService1"
+					},
+					"Type": "forward"
+				}],
+				"Conditions": [{
+					"Field": "path-pattern",
+					"Values": ["/service1"]
+				}],
+				"ListenerArn": {
+					"Ref": "Listener"
+				},
+				"Priority": 1
+			}
+		},
+		"ListenerRuleService2": {
+			"Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+			"Properties": {
+				"Actions": [{
+					"TargetGroupArn": {
+						"Ref": "TargetGroupService2"
+					},
+					"Type": "forward"
+				}],
+				"Conditions": [{
+					"Field": "path-pattern",
+					"Values": ["/service2"]
+				}],
+				"ListenerArn": {
+					"Ref": "Listener"
+				},
+				"Priority": 2
 			}
 		},
 		"VCTSLabSrv1": {
@@ -403,7 +483,8 @@
 							"/usr/bin/yum -y update\n",
 							"/usr/bin/yum -y install httpd\n",
 							"/sbin/chkconfig httpd on\n",
-							"echo '<html><head></head><body>vcts-lab-srv1</body></html>' > /var/www/html/index.html\n",
+                            "echo '<html><head></head><body>vcts-lab-srv1</body></html>' > /var/www/html/index.html\n",
+                            "echo '<html><head></head><body>service1</body></html>' > /var/www/html/service1\n",
 							"echo \"/opt/aws/bin/cfn-signal -e $? ",
 							"  --stack ", {
 								"Ref": "AWS::StackName"
@@ -456,7 +537,8 @@
 							"/usr/bin/yum -y update\n",
 							"/usr/bin/yum -y install httpd\n",
 							"/sbin/chkconfig httpd on\n",
-							"echo '<html><head></head><body>vcts-lab-srv2</body></html>' > /var/www/html/index.html\n",
+                            "echo '<html><head></head><body>vcts-lab-srv2</body></html>' > /var/www/html/index.html\n",
+                            "echo '<html><head></head><body>service2</body></html>' > /var/www/html/service2\n",
 							"echo \"/opt/aws/bin/cfn-signal -e $? ",
 							"  --stack ", {
 								"Ref": "AWS::StackName"
@@ -503,7 +585,7 @@
 		"ELBDNSName": {
 			"Description": "DNS host for the ELB",
 			"Value": {
-				"Fn::GetAtt": ["VCTSLabELB1", "DNSName"]
+				"Fn::GetAtt": ["LoadBalancer", "DNSName"]
 			}
 		}
 	}
