@@ -11,10 +11,12 @@
 	},
 	"Mappings": {
 		"RegionMap": {
-			"us-west-1": { "AMI": "ami-3a674d5a" }
+            "us-west-1": { "AMI": "ami-3a674d5a" },
+            "eu-west-1": { "AMI": "ami-ebd02392" }
 		},
 		"NatRegionMap": {
-			"us-west-1": { "AMI": "ami-6089be00" }
+            "us-west-1": { "AMI": "ami-6089be00" },
+            "eu-west-1": { "AMI": "ami-312aea48" }
 		}
 	},
 	"Resources": {
@@ -34,7 +36,8 @@
 			"Properties": {
 				"CidrBlock": "10.0.0.0/24",
 				"MapPublicIpOnLaunch": true,
-				"Tags": [{
+				"Tags": [
+                    {
 						"Key": "resclass",
 						"Value": "subnet"
 					},
@@ -46,7 +49,9 @@
 				"VpcId": {
 					"Ref": "VPC1"
                 },
-                "AvailabilityZone": "us-west-1a"
+                "AvailabilityZone" : {
+                    "Fn::Select" : [ "0", { "Fn::GetAZs" : "" } ]
+                }
 			}
 		},
 		"Subnet2": {
@@ -54,7 +59,8 @@
 			"Properties": {
 				"CidrBlock": "10.0.1.0/24",
 				"MapPublicIpOnLaunch": false,
-				"Tags": [{
+				"Tags": [
+                    {
 						"Key": "resclass",
 						"Value": "subnet"
 					},
@@ -66,7 +72,9 @@
 				"VpcId": {
 					"Ref": "VPC1"
 				},
-				"AvailabilityZone": "us-west-1c"
+                "AvailabilityZone" : {
+                    "Fn::Select" : [ "1", { "Fn::GetAZs" : "" } ]
+                }
 			}
 		},
 		"Gateway": {
