@@ -1,7 +1,6 @@
 {
-
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "AWS CloudFormation Sample Template LAMP_Single_Instance: Create a LAMP stack using a single EC2 instance and a local MySQL database for storage. This template demonstrates using the AWS CloudFormation bootstrap scripts to install the packages and files necessary to deploy the Apache web server, PHP and MySQL at instance launch time. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Description": "CloudFormation Demo of EC2 and ALB",
     "Parameters": {
         "KeyName": {
             "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
@@ -33,6 +32,78 @@
 		}
     },
     "Resources": {
+		"VPC": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": "10.0.0.0/16"
+			}
+		},
+		"InternetGateway": {
+			"Type": "AWS::EC2::InternetGateway"
+		},
+		"PublicInternetRoute": {
+			"Type": "AWS::EC2::Route",			
+			"Properties": {
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"GatewayId": {
+					"Ref": "InternetGateway"
+				},
+				"RouteTableId": {
+					"Ref": "PublicInternetRouteTable"
+				}
+            },
+            "DependsOn": ["InternetGateway", "PublicInternetRouteTable"]
+		},
+		"VPCGatewayAttachment": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"Properties": {
+				"InternetGatewayId": {
+					"Ref": "InternetGateway"
+				},
+				"VpcId": {
+					"Ref": "VPC"
+				}
+			}
+		},
+		"PublicInternetRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPC"
+				}
+			}
+		},
+		"PublicSubnet1": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"AvailabilityZone": "ca-central-1a",
+				"CidrBlock": "10.0.1.0/24",
+				"VpcId": {
+					"Ref": "VPC"
+				}
+			}
+		},
+		"PrivateSubnet1": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"AvailabilityZone": "ca-central-1a",
+				"CidrBlock": "10.0.3.0/24",
+				"VpcId": {
+					"Ref": "VPC"
+				}
+			}
+		},
+		"PublicSubnet1RouteTableAssociation": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "PublicInternetRouteTable"
+				},
+				"SubnetId": {
+					"Ref": "PublicSubnet1"
+				}
+			}
+		},        
         "WebServerInstance": {
             "Type": "AWS::EC2::Instance",
             "Metadata": {
