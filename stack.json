@@ -1,185 +1,255 @@
 {
-	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "AWS CloudFormation Sample Template EC2InstanceWithSecurityGroupSample: Create an Amazon EC2 instance running the Amazon Linux AMI. The AMI is chosen based on the region in which the stack is run. This example creates an EC2 security group for the instance to give you SSH access. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the AWS resources used if you create a stack from this template.",
-	"Parameters": {
-		"KeyName": {
-			"Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
-			"Type": "String",
-			"Default": "SSHALBDEMO"
-		},
-		"SSHLocation": {
-			"Description": "The IP address range that can be used to SSH to the EC2 instances",
-			"Type": "String",
-			"Default": "0.0.0.0/0"
-		},
-		"InstanceType": {
-			"Description": "WebServer EC2 instance type",
-			"Type": "String",
-			"Default": "t2.nano",
-			"ConstraintDescription": "Must be a valid EC2 instance type"
-		}
-	},
-	"Mappings": {
+
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation Sample Template LAMP_Single_Instance: Create a LAMP stack using a single EC2 instance and a local MySQL database for storage. This template demonstrates using the AWS CloudFormation bootstrap scripts to install the packages and files necessary to deploy the Apache web server, PHP and MySQL at instance launch time. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Parameters": {
+        "KeyName": {
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Default": "SSHALBDEMO",
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+        },
+        "InstanceType": {
+            "Description": "WebServer EC2 instance type",
+            "Type": "String",
+            "Default": "t2.nano",            
+            "ConstraintDescription": "must be a valid EC2 instance type."
+        },
+        "SSHLocation": {
+            "Description": " The IP address range that can be used to SSH to the EC2 instances",
+            "Type": "String",
+            "MinLength": "9",
+            "MaxLength": "18",
+            "Default": "0.0.0.0/0",
+            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+            "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+        }
+    },
+    "Mappings": {
 		"RegionMap": {
 			"ca-central-1": {
 				"AMI": "ami-5ac17f3e"
 			}
 		}
-	},
-	"Resources": {
-		"Ec2Instance": {
-			"Type": "AWS::EC2::Instance",
-
-			"Metadata": {
-				"Comment1": "Configure the bootstrap helpers to install the Apache Web Server and PHP",
-				"Comment2": "Save website content to /var/www/html/index.php",
-
-				"AWS::CloudFormation::Init": {
-					"configSets": {
-						"Install": ["Install"]
-					},
-
-					"Install": {
-						"packages": {
-							"yum": {
-								"mysql": [],
-								"mysql-server": [],
-								"mysql-libs": [],
-								"httpd": [],
-								"php": [],
-								"php-mysql": []
-							}
-						},
-
-						"files": {
-							"/var/www/html/index.php": {
-								"content": {
-									"Fn::Join": ["", [
-										"<html>\n",
-										"  <head>\n",
-										"    <title>AWS CloudFormation PHP Sample</title>\n",
-										"    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=ISO-8859-1\">\n",
-										"  </head>\n",
-										"  <body>\n",
-										"    <h1>Welcome to the AWS CloudFormation PHP Sample</h1>\n",
-										"    <p/>\n",
-										"    <?php\n",
-										"      // Print out the current data and time\n",
-										"      print \"The Current Date and Time is: <br/>\";\n",
-										"      print date(\"g:i A l, F j Y.\");\n",
-										"    ?>\n",
-										"    <p/>\n",
-
-										"    <h2>PHP Information</h2>\n",
-										"    <p/>\n",
-										"    <?php\n",
-										"      phpinfo();\n",
-										"    ?>\n",
-										"  </body>\n",
-										"</html>\n"
-									]]
-								},
-								"mode": "000600",
-								"owner": "apache",
-								"group": "apache"
-							},
-							"services": {
-								"sysvinit": {
-									"httpd": {
-										"enabled": "true",
-										"ensureRunning": "true"
-									}
-								}
-							}
-						}
-					}
-				}
-			},
-
-			"Properties": {
-				"SecurityGroups": [{
-					"Ref": "InstanceSecurityGroup"
-				}],
-				"KeyName": {
-					"Ref": "KeyName"
-				},
-				"UserData": {
-					"Fn::Base64": {
-						"Fn::Join": ["", [
-							"#!/bin/bash -xe\n",
-							"yum install -y aws-cfn-bootstrap\n",
-							"# Install the files and packages from the metadata\n",
-							"/opt/aws/bin/cfn-init -v ",
-							"         --stack ", {
-								"Ref": "AWS::StackName"
-							},
-							"         --resource WebServerInstance ",
-							"         --configsets Install ",
-							"         --region ", {
-								"Ref": "AWS::Region"
-							}, "\n"
-						]]
-					}
-				},
-				"ImageId": {
-					"Fn::FindInMap": ["RegionMap", {
-						"Ref": "AWS::Region"
-					}, "AMI"]
-				},
-				"InstanceType": {
-					"Ref": "InstanceType"
-				}
-			}
-		},
-
-		"InstanceSecurityGroup": {
-			"Type": "AWS::EC2::SecurityGroup",
-			"Properties": {
-				"GroupDescription": "Enable SSH access via port 22",
-				"SecurityGroupIngress": [
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "22",
-                        "ToPort": "22",
-                        "CidrIp": {
-                            "Ref": "SSHLocation"
-                        }
+    },
+    "Resources": {
+        "WebServerInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata": {
+                "AWS::CloudFormation::Init": {
+                    "configSets": {
+                        "InstallAndRun": [
+                            "Install"
+                        ]
                     },
+                    "Install": {
+                        "packages": {
+                            "yum": {
+                                "mysql": [ ],
+                                "mysql-server": [ ],
+                                "mysql-libs": [ ],
+                                "httpd": [ ],
+                                "php": [ ],
+                                "php-mysql": [ ]
+                            }
+                        },
+                        "files": {
+                            "/var/www/html/index.php": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "<html>\n",
+                                            "  <head>\n",
+                                            "    <title>AWS CloudFormation PHP Sample</title>\n",
+                                            "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=ISO-8859-1\">\n",
+                                            "  </head>\n",
+                                            "  <body>\n",
+                                            "    <h1>Welcome to the AWS CloudFormation PHP Sample</h1>\n",
+                                            "    <p/>\n",
+                                            "    <?php\n",
+                                            "      // Print out the current data and time\n",
+                                            "      print \"The Current Date and Time is: <br/>\";\n",
+                                            "      print date(\"g:i A l, F j Y.\");\n",
+                                            "    ?>\n",
+                                            "    <p/>\n",
+                                            "    <h2>PHP Information</h2>\n",
+                                            "    <p/>\n",
+                                            "    <?php\n",
+                                            "      phpinfo();\n",
+                                            "    ?>\n",
+                                            "  </body>\n",
+                                            "</html>\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000600",
+                                "owner": "apache",
+                                "group": "apache"
+                            },
+                            "/etc/cfn/cfn-hup.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "[main]\n",
+                                            "stack=",
+                                            {
+                                                "Ref": "AWS::StackId"
+                                            },
+                                            "\n",
+                                            "region=",
+                                            {
+                                                "Ref": "AWS::Region"
+                                            },
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000400",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "[cfn-auto-reloader-hook]\n",
+                                            "triggers=post.update\n",
+                                            "path=Resources.WebServerInstance.Metadata.AWS::CloudFormation::Init\n",
+                                            "action=/opt/aws/bin/cfn-init -v ",
+                                            "         --stack ",
+                                            {
+                                                "Ref": "AWS::StackName"
+                                            },
+                                            "         --resource WebServerInstance ",
+                                            "         --configsets InstallAndRun ",
+                                            "         --region ",
+                                            {
+                                                "Ref": "AWS::Region"
+                                            },
+                                            "\n",
+                                            "runas=root\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000400",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "httpd": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true"
+                                },
+                                "cfn-hup": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/cfn/cfn-hup.conf",
+                                        "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "Properties": {
+                "ImageId": {
+					"Fn::FindInMap": ["RegionMap", { "Ref": "AWS::Region" }, "AMI"]
+				},
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "SecurityGroups": [
                     {
-                        "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
-                        "CidrIp": "0.0.0.0/0"
-                    }                    
-                ]
-			}
-		}
-	},
+                        "Ref": "WebServerSecurityGroup"
+                    }
+                ],
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -xe\n",
+                                "yum update -y aws-cfn-bootstrap\n",
+                                "# Install the files and packages from the metadata\n",
+                                "/opt/aws/bin/cfn-init -v ",
+                                "         --stack ",
+                                {
+                                    "Ref": "AWS::StackName"
+                                },
+                                "         --resource WebServerInstance ",
+                                "         --configsets InstallAndRun ",
+                                "         --region ",
+                                {
+                                    "Ref": "AWS::Region"
+                                },
+                                "\n",
+                                "# Signal the status from cfn-init\n",
+                                "/opt/aws/bin/cfn-signal -e $? ",
+                                "         --stack ",
+                                {
+                                    "Ref": "AWS::StackName"
+                                },
+                                "         --resource WebServerInstance ",
+                                "         --region ",
+                                {
+                                    "Ref": "AWS::Region"
+                                },
+                                "\n"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "CreationPolicy": {
+                "ResourceSignal": {
+                    "Timeout": "PT5M"
+                }
+            }
+        },
+        "WebServerSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "WIDE OPEN",
+                "SecurityGroupIngress": [                    
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : "0",
+                        "ToPort" : "65535",
+                        "CidrIp" : "0.0.0.0/0"
 
-	"Outputs": {
-		"InstanceId": {
-			"Description": "InstanceId of the newly created EC2 instance",
-			"Value": {
-				"Ref": "Ec2Instance"
-			}
-		},
-		"AZ": {
-			"Description": "Availability Zone of the newly created EC2 instance",
-			"Value": {
-				"Fn::GetAtt": ["Ec2Instance", "AvailabilityZone"]
-			}
-		},
-		"PublicDNS": {
-			"Description": "Public DNSName of the newly created EC2 instance",
-			"Value": {
-				"Fn::GetAtt": ["Ec2Instance", "PublicDnsName"]
-			}
-		},
-		"PublicIP": {
-			"Description": "Public IP address of the newly created EC2 instance",
-			"Value": {
-				"Fn::GetAtt": ["Ec2Instance", "PublicIp"]
-			}
-		}
-	}
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "WebsiteURL": {
+            "Description": "URL for newly created LAMP stack",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        {
+                            "Fn::GetAtt": [
+                                "WebServerInstance",
+                                "PublicDnsName"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+    }
+
 }
